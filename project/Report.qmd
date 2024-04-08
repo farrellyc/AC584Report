@@ -1,0 +1,229 @@
+---
+title: "**Exploring Child Health:** ***Careseeking Behaviour for Febrile Children***"
+subtitle: "**Careseeking Behaviour for Febrile Children**"
+author: "Conor Farrelly"
+date: "2024-04-04"
+format:
+  html:
+      theme: zephyr
+      backgroundcolor: lightblue
+      toc: true
+
+
+
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+## 1. Introduction
+
+
+*Healthcare access* and *utilization* are essential components of ensuring the well-being of populations, particularly among vulnerable groups such as *children under the age of 5*. However, *disparities* in healthcare-seeking behavior based on *gender* can significantly impact health outcomes and access to necessary medical interventions. In this analysis, we delve into the **gender disparities** in *care-seeking behavior* for *febrile children*, examining trends and patterns across various countries. Through visualizations such as *bar charts* and *scatter plots*, we aim to shed light on the differences in healthcare utilization between *males* and *females*, highlighting key insights that can inform policies and interventions aimed at promoting equitable access to healthcare services.
+
+
+
+<img src="https://www.dsbelgrad.com/wp-content/uploads/2021/05/HP_GYM_20210519_UNICEF-1024x663.jpg" width="600">
+
+
+
+
+
+```{r}
+#| label: setup
+#| include: false
+
+
+library(tidyverse)
+library(maps)
+library(plotly)
+library (dplyr)
+
+unicef_indicator_2 <- read_csv("unicef_indicator_2.csv")
+unicef_metadata <- read_csv("unicef_metadata.csv")
+
+data_join <- full_join(unicef_metadata, unicef_indicator_2, by = c("country" = "country"))
+
+data_join <- unicef_metadata %>% 
+  full_join(unicef_indicator_2, by = c("country" = "country", "year" = "time_period"))
+
+
+```
+
+## 2. Global Map Overview 
+
+```{r}
+#| label: figure 1
+#|  
+#|
+
+map_world <- map_data("world") 
+map_data_join <- full_join(unicef_indicator_2, map_world, by = c("country" = "region"))
+
+ggplot(map_data_join) +
+  aes(x = long, y = lat, group = group, fill = obs_value) +
+  geom_polygon() +
+  scale_fill_gradient(low ="pink" , high = "red" ) +
+  labs (fill = "%") +
+  labs(title = "               Average % of Careseeking for Febrile Children 
+         (under age 5) across Observed Countries: (2004-2022)") +
+  theme_void() +
+  theme(plot.background = element_rect(fill= "lightblue"))
+
+
+```
+
+
+
+**Overview of Careseeking Behavior for Febrile Children**
+
+- This map provides an *overview* of the **average percentage** of children under the age of 5 who sought advice or treatment from a health facility or provider when experiencing fever across various countries from **2004 to 2022**.
+
+- The color intensity on the map represents the level of careseeking behavior, with **darker shades** indicating higher percentages. 
+
+- This visualization can help gain insights into regional disparities and progress in healthcare access for febrile children. 
+
+- *Trends over time* can be compared, with careseeking rates across African countries highlighting as the lowest.
+
+
+
+
+
+
+## 3. Time Series Analysis  
+
+```{r}
+# Sample data (replace with your actual dataset)
+set.seed(123)
+years <- 2006:2021
+males <- c(0.646, 0.728, 0.6145, 0.6145, 0.5351, 0.5527, 0.5735, 0.6172, 0.5593, 0.6308, 0.6041, 0.6304, 0.6341, 0.6528, 0.6556, 0.7940)
+females <- c(0.6185, 0.6448, 0.5520, 0.5981, 0.5228, 0.5444, 0.5624, 0.6007, 0.5708, 0.6265, 0.5997, 0.6291, 0.6216, 0.6640, 0.6480, 0.802)
+
+data <- data.frame(year = years, males = males, females = females)
+
+# Reshape data to long format
+data_long <- tidyr::pivot_longer(data, cols = c(males, females), names_to = "sex", values_to = "care_seek_percentage")
+
+# Plotly plot
+p <- ggplot(data_long, aes(x = year, y = care_seek_percentage * 100, color = sex, group = sex)) +
+  geom_line(size = 1.5) +
+  labs(x = "Year", y = "Care-seeking Percentage (%)", color = "Sex", title = "Gender Disparities in Care-seeking Percentages by Year") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +  theme(panel.background = element_rect(fill= "lightblue"), plot.background = element_rect(fill = "lightblue"))
+
+# Convert to plotly
+ggplotly(p)
+```
+
+- **The line chart** provides an insightful visualization of *gender disparities* in *care-seeking behavior* for *febrile children* across the globe from *2006 to 2022*. Initially, there was a noticeable trend indicating that *males sought care more frequently* than *females*, suggesting potential disparities in healthcare access or cultural factors influencing help-seeking behaviors. 
+
+- However, as the years progressed, there was a notable *convergence* in care-seeking rates between genders, indicating a shift towards **gender parity** in healthcare-seeking behavior. This trend towards parity suggests potential improvements in healthcare access, awareness, and societal norms surrounding caregiving responsibilities. 
+
+- The *visualization* serves as a compelling illustration of evolving healthcare dynamics and the importance of addressing gender disparities in healthcare access and utilization.
+
+
+
+
+
+
+
+## 4. Scatter Plot Correlation
+
+```{r}
+# Scatter plot
+vis_3 <- data_join %>%
+  group_by(country) %>%
+  summarise(
+    Avg_Life_Expectancy = mean(`Life expectancy at birth, total (years)`, na.rm = TRUE),
+    Obs_value_avg = mean(obs_value, na.rm = TRUE)
+  ) %>%
+  ggplot(aes(x = Avg_Life_Expectancy, y = Obs_value_avg, color = country)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, size = 0.6, color = "black") +
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0, NA)) +  
+  labs(
+    y = "Average Life Expectancy (years)",
+    x = "Average Care-Seeking Value",
+    title = "Correlation Between Life Expectancy and Care-Seeking for Febrile Children"
+  ) +  theme(panel.background = element_rect(fill= "lightblue"), plot.background = element_rect(fill = "lightblue"))
+
+  
+
+ggplotly(vis_3)   
+
+
+```
+
+
+
+
+
+**Positive Correlation Between Life Expectancy and Care-seeking Behavior**
+
+- The scatter plot visualizes the *positive correlation* between **life expectancy at birth** and the **percentage of caregivers seeking care** for febrile children across various countries. 
+
+- Each data point on the scatter plot corresponds to a specific country, with the visualization revealing a **clear upward trend**. This suggests that regions with higher life expectancy tend to have higher rates of care-seeking for febrile children under the age of 5.
+
+- This correlation underscores the *importance of healthcare access* and utilization in **improving child health outcomes** and overall life expectancy.
+
+
+
+
+## 5. Bar Chart of Gender Disparities
+```{r}
+#Bar Chart
+
+library(ggplot2)
+library(plotly)
+
+# Input your own percentages for the five countries
+countries <- c("Sri Lanka", "Tuvalu", "Nauru", "Albania", "Yemen")
+male_percentage <- c(0.8955, 0.8765, 0.697, 0.824, 0.618)
+female_percentage <- c(0.376, 0.7085, 0.595, 0.3680, 0.2940)
+
+# Create a data frame
+data <- data.frame(
+  country = rep(countries, each = 2),  # Repeat each country twice
+  sex = rep(c("Male", "Female"), times = length(countries)),  # Specify sex labels for each country
+  percentage = c(male_percentage, female_percentage)
+)
+
+# Convert to plotly
+p <- ggplot(data, aes(x = country, y = percentage, fill = sex)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Country", y = "Care-Seeking Percentage", fill = "Gender", title = "Gender Disparities in Careseeking for Febrile Children 2006-2022") +
+   theme(panel.background = element_rect(fill= "lightblue"), plot.background = element_rect(fill = "lightblue"))
+ 
+  
+
+ggplotly(p)
+```
+---
+
+- **The bar chart** above, along with the preceding analysis of the line chart, both shed light on *gender disparity* in healthcare-seeking behavior.
+
+- The bar chart focuses specifically on *five countries* and illustrates the gender disparities in *care-seeking for febrile children* across these nations. It compares the percentages of male versus female careseekers, providing insights into the gender gaps in healthcare behavior.
+
+- Significant disparities are evident across the countries. For instance, in *Tuvalu*, females seek care *13% more frequently* than males, indicating a considerable gender gap in healthcare utilization. Conversely, in other countries like *Sri Lanka*, the results show a more balanced distribution of care-seeking behavior between genders.
+
+
+
+
+## 6. Conclusion
+
+
+In *conclusion*, the visualizations presented in this analysis provide valuable insights into the **gender disparities** in *healthcare-seeking behavior* for *febrile children*. The findings underscore the importance of **addressing these disparities** to ensure **equitable access** to healthcare services for all individuals, regardless of gender. As evidenced by the **convergence** in care-seeking rates over time and the notable differences highlighted in the bar chart analysis, there is a *pressing need* for **targeted interventions** and policies aimed at promoting **gender parity** in healthcare access. By addressing these disparities, we can strive towards a more *inclusive* healthcare system that prioritizes the well-being of all individuals, particularly the most *vulnerable* members of society.
+
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
